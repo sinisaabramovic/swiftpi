@@ -7,8 +7,11 @@
 
 import Foundation
 import Vapor
+import SwiftyGPIO
 
 struct APIController: RouteCollection {
+    
+    let gpios = SwiftyGPIO.GPIOs(for:.RaspberryPi4)
     
     func boot(routes: RoutesBuilder) throws {
         let api = routes.grouped("api-stations")
@@ -19,6 +22,10 @@ struct APIController: RouteCollection {
         }
 
         api.get(":stationId", use: getStation)
+        
+        api.post("turnon", use: turnOn)
+        
+        api.post("turnoff", use: turnOff)
         
         api.post { request in
             try self.createStation(request: request)
@@ -45,5 +52,23 @@ private extension APIController {
         let station = try request.content.decode(Station.self)
         station.id = nil
         return station.create(on: request.db).map { station }
+    }
+}
+
+// GPIO
+private extension APIController {
+    
+    func turnOn(request: Request) throws -> String {
+        var gp = gpios[.P2]!
+        gp.direction = .OUT
+        gp.value = 1
+        return "ok"
+    }
+    
+    func turnOff(request: Request) throws -> String {
+        var gp = gpios[.P2]!
+        gp.direction = .OUT
+        gp.value = 0
+        return "ok"
     }
 }
